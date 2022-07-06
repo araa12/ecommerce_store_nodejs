@@ -1,6 +1,7 @@
 const User = require("../models/User.js");
 const CryptoJS = require("crypto-js");
 const router = require("express").Router();
+const bcrypt = require("bcryptjs");
 const jwt = require('jsonwebtoken');
 
 ///Register
@@ -12,25 +13,54 @@ router.post("/register", async (req, res) => {
   const fullName = req.body.fullName;
   const address = req.body.address;
 
-  const user = await User.findOne({ email: email });
-  if(user){
-    res.status(401).json({ message: "Email already registered with another account"});
-    return;
-  }
-  
-  const newUser = new User({
-    email: email,
-    fullName: fullName,
-    address: address,
-    password: CryptoJS.AES.encrypt(password, process.env.PASS_KEY).toString(),
-    // isAdmin: req.body.isAdmin
-  });
+
+
+
+  // const newUser =s new User({
+  //   email: email,
+  //   fullName: fullName,
+  //   address: address,
+  //   password: CryptoJS.AES.encrypt(password, process.env.PASS_KEY).toString(),
+  //   // isAdmin: req.body.isAdmin
+  // });
   try {
-    const savedUser = await newUser.save();
-    res.status(200).json({
-      message: "User Created SuccessFully",
-      user: savedUser,
+
+    if (!(email && password && fullName && address )) {
+     return res.status(400).json({message: "All input is required"});
+    }
+    
+
+    const oldUser = await User.findOne({ email });
+
+    if (oldUser) {
+      return res.status(409).send("User Already Exist. Please Login");
+    }
+    
+
+    encryptedPassword = await bcrypt.hash(password, 10);
+
+    // Create user in our database
+    const user = await User.create({
+      fullName: fullName,
+      address: address,
+      email: email.toLowerCase(), // sanitize: convert email to lowercase
+      password: encryptedPassword,
     });
+
+     // Create token
+     const token = jwt.sign(
+      { user_id: user._id, email },
+      process.env.TOKEN_KEY,
+      {
+        expiresIn: "2h",
+      }
+    );
+    // save user token
+    user.token = token;
+
+    // return new user
+    res.status(200).json({message: "User Created Successfully", user: user});
+
   } catch (err) {
   
       res.status(500).json({message: err});
@@ -46,39 +76,36 @@ router.post("/login", async (req, res) => {
 
   try {
 
-    const user = await User.findOne({ email: email});
+    const user = await User.findOne({ email });
 
-    if(!user){
-      res.status(401).json({ message: "No User Exists on Server" })
-      return;
+    if (user && (await bcrypt.compare(orginalpass, user.password))) {
+      // Create token
+      const token = jwt.sign(
+        { user_id: user._id, email },
+        process.env.TOKEN_KEY,
+        {
+          expiresIn: "30d",
+        }
+      );
+
+      // save user token
+      user.token = token;
+
+      const { password, ...others } = user._doc;
+
+
+      // user
+      res.status(200).json({access_token:token, user: others});
     }
+    // res.status(400).send("Invalid Credentials");
+    // if(pass !== orginalpass){
+    //   res.status(401).json({ message: "Wrong Password" });
+    //   return;
+    // }
 
-    const hashedPassword = CryptoJS.AES.decrypt(
-      user.password,
-      process.env.PASS_KEY
-    );
+    res.status(400).json({message: "Invavlid Credentials"});
 
-    const pass = hashedPassword.toString(CryptoJS.enc.Utf8);
-
-    if(pass !== orginalpass){
-      res.status(401).json({ message: "Wrong Password" });
-      return;
-    }
-
-    const { password, ...others } = user._doc;
-
-    const accessToken = await jwt.sign({
-        id: user._id,
-        isAdmin: user.isAdmin,
-    },process.env.JWT_KEY,{
-        expiresIn: "360d"
-    });
-
-    res.status(200).json({
-    accessToken,
-    ...others});
   }
-
    catch (err) {
        console.log(err);
      res.status(500).json({message:err});

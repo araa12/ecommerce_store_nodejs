@@ -8,6 +8,7 @@ const userSchema = mongoose.Schema(
     image: {type: String, default: 'new-user'},
     password: { type: String, required: true },
     address: {type: String, default: ''},
+    token: { type: String },
     isAdmin: { type: Boolean, default: false },
   }, 
   { timestamps: true }

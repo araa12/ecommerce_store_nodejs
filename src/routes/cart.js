@@ -7,7 +7,7 @@ const {
 } = require("./verify_token");
 
 //Create New Cart
-router.post("/", verifyToken, async (req, res) => {
+router.post("/", verifyTokenAndAuth, async (req, res) => {
   
     const newCart = Cart(req.body);
 
@@ -17,7 +17,7 @@ router.post("/", verifyToken, async (req, res) => {
       .status(200)
       .json({ message: "Cart Created SuccessFully", product: savedCart });
   } catch (err) {
-    res.status(500).json({ error: err });
+    res.status(500).json({ message: err });
   }
 });
 
@@ -51,12 +51,12 @@ router.delete("/:id", verifyTokenAndAuth, async (req, res) => {
 });
 
 ///Get User CArt
-router.get("/find/:userId", verifyTokenAndAuth, async (req, res) => {
+router.get("/:userId", verifyTokenAndAuth, async (req, res) => {
   try {
     const cart = await Cart.findOne({ userId: req.params.userId });
     res.status(200).json(cart);
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({message: err});
   }
 });
 
