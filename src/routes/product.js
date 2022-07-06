@@ -3,7 +3,7 @@ const Product = require('../models/Product');
 const { verifyTokenAndAdmin, verifyTokenAndAuth } = require('./verify_token');
 
 //Create New Product 
-router.post('/', verifyTokenAndAdmin, async (req,res)=> {
+router.post('/',  async (req,res)=> {
     const product = Product(req.body);
 
     try{
@@ -48,6 +48,21 @@ router.get("/find/:id",verifyTokenAndAdmin, async (req,res)=> {
     }catch(err){
         res.status(500).json(err);
     }
+});
+
+
+ const categories = ["Mobiles","Laptops","Computer","Fashion","Wear","Home Appliances","Beauty","Accessories"];
+///Get All Product Categories //
+router.get("/categories",async (req,res)=> {
+  
+   try{
+  //  var query = await Product.find({}).select('categories -_id');
+   // console.log(query);
+    res.status(200).json(categories.sort());
+   }catch(err){
+    res.status(404).json({"message":err});
+    console.log(err);
+   }
 });
 
 //Get All Product
